@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PythonOS Web Launcher & Terminal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for clean iconography -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              950: '#060a12',
+              900: '#0c1322',
+              800: '#152037',
+              700: '#1f2e4d',
+              cyan: '#00f0ff',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              purple: '#8b5cf6'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace', 'Courier New']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #060a12;
+      color: #e2e8f0;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    .font-mono-code {
+      font-family: 'Fira Code', monospace;
+    }
+
+    /* Glassmorphism */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .glass-panel {
+      background: rgba(12, 19, 34, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 240, 255, 0.15);
+    }
+
+    /* Shake Animation for failed auth */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-anim {
+      animation: shake 0.35s ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(6, 10, 18, 0.5);
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 240, 255, 0.5);
+    }
+
+    /* Subtle glow effects */
+    .glow-cyan {
+      box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.25);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.25);
+    }
+    .glow-amber {
+      box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-cyber-950 text-slate-200">
+
+  <!-- ==================== LOCK SCREEN ==================== -->
+  <div id="lockScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 transition-all duration-700 bg-cover bg-center"
+       style="background-image: radial-gradient(circle at center, rgba(12, 19, 34, 0.88), rgba(6, 10, 18, 0.98)), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1920&auto=format&fit=crop');">
+    
+    <!-- Top System Time -->
+    <div class="mt-8 text-center">
+      <div id="lockClock" class="text-7xl md:text-8xl font-extralight tracking-tight text-white drop-shadow-md">12:00</div>
+      <div id="lockDate" class="text-sm md:text-base text-cyan-300 font-medium tracking-wide mt-2">Friday, September 18</div>
+    </div>
+
+    <!-- Login Box Card -->
+    <div id="loginBox" class="w-full max-w-md glass-panel p-8 rounded-3xl shadow-2xl flex flex-col items-center relative border border-cyan-500/20 glow-cyan">
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[2px] mb-4 shadow-lg shadow-cyan-500/20">
+        <div class="w-full h-full bg-cyber-900 rounded-2xl flex items-center justify-center text-cyan-400 text-3xl">
+          <i class="fa-brands fa-python"></i>
+        </div>
+      </div>
+      
+      <h2 class="text-xl font-bold text-white tracking-wide">Python OS Environment</h2>
+      <p class="text-xs text-slate-400 mt-1 mb-6">Enter system password to initialize launchers</p>
+
+      <form id="authForm" onsubmit="handleLogin(event)" class="w-full space-y-4">
+        <div class="relative">
+          <input 
+            type="password" 
+            id="authPassword" 
+            placeholder="Enter password (script requires 'abc12367')"
+            autocomplete="current-password"
+            class="w-full bg-slate-900/90 border border-slate-700 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-xl py-3 pl-11 pr-24 text-sm text-white placeholder-slate-500 outline-none transition"
+          />
+          <span class="absolute left-4 top-3.5 text-slate-400 text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </span>
+          <div class="absolute right-2 top-2 flex items-center gap-1">
+            <button type="button" onclick="togglePasswordVisibility()" class="p-1.5 text-slate-400 hover:text-cyan-400 rounded-lg text-xs" title="Toggle Show">
+              <i id="togglePwdIcon" class="fa-solid fa-eye"></i>
+            </button>
+            <button type="submit" class="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-lg text-xs font-semibold flex items-center gap-1 transition shadow">
+              <span>Go</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+
+        <p id="authError" class="text-rose-400 text-xs font-medium hidden text-center">
+          <i class="fa-solid fa-circle-exclamation mr-1"></i> Wrong password! Enter the password again.
+        </p>
+
+        <div class="flex items-center justify-between pt-1">
+          <button type="button" onclick="autoFillPassword()" class="text-xs text-cyan-400/90 hover:text-cyan-300 underline decoration-dotted transition">
+            Auto-fill demo password
+          </button>
+          <span class="text-[11px] font-mono text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700">Pass: abc12367</span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Security Information Footer -->
+    <div class="text-xs text-slate-400 text-center max-w-md">
+      <span class="inline-flex items-center gap-1.5 text-cyan-400 bg-cyan-950/40 px-3 py-1 rounded-full border border-cyan-800/40">
+        <i class="fa-solid fa-shield-halved text-[11px]"></i> Direct URI Scheme + Web Fallback Protocol
+      </span>
+    </div>
+  </div>
+
+  <!-- ==================== DESKTOP TOP BAR ==================== -->
+  <header class="h-12 w-full bg-cyber-900/90 border-b border-slate-800/80 backdrop-blur px-4 md:px-6 flex items-center justify-between text-xs sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 font-bold tracking-wider text-cyan-400">
+        <i class="fa-brands fa-python text-base text-yellow-400"></i>
+        <span>PYTHON<span class="text-white">OS</span></span>
+      </div>
+      <span class="hidden md:inline-block text-[11px] text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded">web.py v2.4</span>
+    </div>
+
+    <!-- Status Indicators & Sound toggle -->
+    <div class="flex items-center gap-4">
+      <button onclick="toggleAudio()" id="audioBtn" class="text-slate-400 hover:text-cyan-400 flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-800/60 transition" title="Sound Effects">
+        <i id="audioIcon" class="fa-solid fa-volume-high text-cyan-400"></i>
+        <span class="hidden sm:inline text-[11px]">SFX On</span>
+      </button>
+
+      <div class="h-4 w-[1px] bg-slate-800"></div>
+
+      <div class="flex items-center gap-3 text-slate-400">
+        <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Ready
+        </span>
+        <span id="statusBarTime" class="font-mono text-slate-200 font-semibold">12:00:00</span>
+      </div>
+
+      <button onclick="lockSystem()" class="text-slate-400 hover:text-rose-400 p-1.5 rounded hover:bg-slate-800/60 transition" title="Lock System">
+        <i class="fa-solid fa-lock"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN LAUNCHER CONTENT ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- Browser Execution Security Notice Banner -->
+    <div class="glass-card rounded-2xl p-4 border border-cyan-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+      <div class="flex items-start md:items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-lg flex-shrink-0">
+          <i class="fa-solid fa-circle-info"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-white">How Native Launching Works from this Website:</h3>
+          <p class="text-slate-300 mt-0.5">
+            Web browsers sandbox raw <code class="text-cyan-300 font-mono">.exe</code> calls. This app uses registered OS URI protocols 
+            (<code class="text-yellow-300 font-mono">whatsapp://</code>, <code class="text-yellow-300 font-mono">ms-calculator:</code>) to trigger installed desktop apps, with automatic browser fallbacks!
+          </p>
+        </div>
+      </div>
+      <button onclick="showBridgeModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 rounded-xl whitespace-nowrap transition flex items-center gap-1.5">
+        <i class="fa-solid fa-terminal text-xs"></i>
+        <span>Native Python Bridge</span>
+      </button>
+    </div>
+
+    <!-- App Cards Launcher Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+      <!-- WHATSAPP CARD -->
+      <div class="glass-panel rounded-2xl p-5 relative overflow-hidden group hover:border-emerald-500/40 transition duration-300">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition"></div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-2xl group-hover:scale-105 transition">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full">
+            whatsapp://
+          </span>
+        </div>
+        
+        <h3 class="text-lg font-bold text-white">WhatsApp</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-5">Launch the official desktop application directly, or jump straight to WhatsApp Web.</p>
+
+        <div class="space-y-2.5">
+          <button onclick="launchWhatsAppNative()" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition">
+            <i class="fa-solid fa-up-right-from-square text-xs"></i>
+            <span>Open Desktop App (Native)</span>
+          </button>
+          <div class="flex gap-2">
+            <button onclick="openWhatsAppWeb()" class="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-globe text-emerald-400"></i>
+              <span>WhatsApp Web</span>
+            </button>
+            <button onclick="launchWhatsAppCustomNumber()" class="py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 rounded-xl text-xs border border-slate-700 transition" title="Message a phone number">
+              <i class="fa-solid fa-comment-dots text-emerald-400"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHROME & WEB SEARCH CARD -->
+      <div class="glass-panel rounded-2xl p-5 relative overflow-hidden group hover:border-blue-500/40 transition duration-300">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition"></div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-2xl group-hover:scale-105 transition">
+            <i class="fa-brands fa-chrome"></i>
+          </div>
+          <span class="text-[10px] font-mono text-blue-400 bg-blue-950/60 border border-blue-800/60 px-2 py-0.5 rounded-full">
+            google.com
+          </span>
+        </div>
+
+        <h3 class="text-lg font-bold text-white">Google Chrome</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-3">Launch a new Google Chrome window or perform a quick live search.</p>
+
+        <div class="space-y-2.5">
+          <div class="relative">
+            <input 
+              type="text" 
+              id="chromeQuery" 
+              placeholder="Search Google or enter URL..."
+              onkeydown="if(event.key === 'Enter') launchChromeSearch()"
+              class="w-full bg-slate-900 border border-slate-700 focus:border-blue-400 rounded-xl py-2 pl-8 pr-16 text-xs text-white placeholder-slate-500 outline-none transition"
+            />
+            <span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <button onclick="launchChromeSearch()" class="absolute right-1.5 top-1.5 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-medium transition">
+              Go
+            </button>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="launchChromeWindow()" class="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/20 active:scale-[0.98] transition">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              <span>New Chrome Window</span>
+            </button>
+            <button onclick="openPythonDocs()" class="py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center gap-1 transition" title="Python Documentation">
+              <i class="fa-brands fa-python text-yellow-400"></i>
+              <span>Docs</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CALCULATOR CARD -->
+      <div class="glass-panel rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/40 transition duration-300">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition"></div>
+        <div class="flex items-center justify-between mb-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl group-hover:scale-105 transition">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <span class="text-[10px] font-mono text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded-full">
+            ms-calculator:
+          </span>
+        </div>
+
+        <h3 class="text-lg font-bold text-white">Calculator</h3>
+        <p class="text-xs text-slate-400 mt-1 mb-5">Launch Windows 10/11 system Calculator, or open the Python 3-number calculator widget.</p>
+
+        <div class="space-y-2.5">
+          <button onclick="launchWindowsCalculator()" class="w-full py-2.5 px-4 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-amber-600/20 active:scale-[0.98] transition">
+            <i class="fa-brands fa-windows text-xs"></i>
+            <span>Launch Windows App (ms-calculator:)</span>
+          </button>
+          <div class="flex gap-2">
+            <button onclick="toggleCalculatorModal(true)" class="flex-1 py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-window-maximize text-amber-400"></i>
+              <span>Python Calc Widget</span>
+            </button>
+            <button onclick="runCalculatorInTerminal()" class="py-2 px-3 bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 rounded-xl text-xs border border-slate-700 flex items-center gap-1.5 transition" title="Run in Terminal">
+              <i class="fa-solid fa-terminal text-cyan-400"></i>
+              <span>CLI</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== VIRTUAL PYTHON TERMINAL ==================== -->
+    <div class="glass-panel rounded-2xl border border-cyan-500/20 shadow-2xl overflow-hidden flex flex-col h-[480px]">
+      
+      <!-- Terminal Header Bar -->
+      <div class="bg-slate-900/90 px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+          </div>
+          <span class="text-xs font-mono font-medium text-slate-300 flex items-center gap-1.5 ml-2">
+            <i class="fa-solid fa-terminal text-cyan-400 text-xs"></i>
+            python3 web.py — Interactive Execution Shell
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <button onclick="clearTerminal()" class="px-2.5 py-1 text-slate-400 hover:text-white bg-slate-800/80 rounded-lg transition text-[11px]" title="Clear terminal">
+            <i class="fa-solid fa-eraser mr-1"></i> Clear
+          </button>
+          <button onclick="insertSampleCommand('whelp')" class="px-2 py-1 text-cyan-400 hover:text-cyan-300 bg-cyan-950/50 border border-cyan-800/50 rounded-lg transition text-[11px]">
+            whelp
+          </button>
+          <button onclick="insertSampleCommand('calc')" class="px-2 py-1 text-amber-400 hover:text-amber-300 bg-amber-950/50 border border-amber-800/50 rounded-lg transition text-[11px]">
+            calc
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Canvas -->
+      <div id="terminalLog" class="flex-1 p-4 bg-cyber-950/95 font-mono-code text-xs md:text-sm text-green-400 overflow-y-auto custom-scroll space-y-1.5">
+        <div class="text-slate-500">Python 3.11.4 [GCC 12.2.0] on linux/browser-runtime</div>
+        <div class="text-slate-400">Authenticated successfully as <span class="text-cyan-400 font-bold">root</span>. Virtual Desktop Loaded.</div>
+        <div class="text-yellow-300/90 py-1">Type <span class="underline font-semibold text-yellow-300 cursor-pointer" onclick="insertSampleCommand('whelp')">'whelp'</span> for list of apps, or run: <span class="text-emerald-300">'whatsapp'</span>, <span class="text-blue-300">'chrome'</span>, <span class="text-amber-300">'calculator'</span>, <span class="text-slate-300">'clear'</span>.</div>
+        <hr class="border-slate-800/80 my-2" />
+      </div>
+
+      <!-- Terminal Active Input Row -->
+      <div class="p-3 bg-slate-900/90 border-t border-slate-800/80 flex items-center gap-2">
+        <span id="termPromptPrefix" class="text-cyan-400 font-mono-code font-bold text-xs md:text-sm pl-1">-></span>
+        <input 
+          type="text" 
+          id="termInput" 
+          autocomplete="off" 
+          autofocus
+          placeholder="Type an app name or command..."
+          class="flex-1 bg-transparent border-none outline-none font-mono-code text-emerald-300 text-xs md:text-sm placeholder-slate-600"
+        />
+        <button onclick="handleTerminalSubmit()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono text-xs font-semibold rounded-lg transition flex items-center gap-1">
+          <span>Run</span>
+          <i class="fa-solid fa-play text-[10px]"></i>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== PYTHON CALCULATOR MODAL ==================== -->
+  <div id="calcModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg glass-panel rounded-3xl p-6 border border-amber-500/30 shadow-2xl relative">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-calculator"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-white text-sm">Python Script Calculator</h4>
+            <span class="text-[10px] text-amber-400 font-mono">web.py logic: n1, n2, n3, quotient & remainder</span>
+          </div>
+        </div>
+        <button onclick="toggleCalculatorModal(false)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+          ✕
+        </button>
+      </div>
+
+      <!-- Input Controls -->
+      <div class="space-y-3 font-mono">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[10px] uppercase text-slate-400 font-semibold block mb-1">Enter first number (n1)</label>
+            <input type="number" id="guiN1" value="20" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-amber-400 outline-none" />
+          </div>
+          <div>
+            <label class="text-[10px] uppercase text-slate-400 font-semibold block mb-1">Enter second number (n2)</label>
+            <input type="number" id="guiN2" value="6" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-amber-400 outline-none" />
+          </div>
+        </div>
+
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs text-slate-300">Operate with a third number (n3)?</span>
+            <input type="checkbox" id="guiHasN3" onchange="toggleGuiN3Field()" class="w-4 h-4 rounded text-amber-500 focus:ring-0 bg-slate-800 border-slate-700 cursor-pointer" />
+          </label>
+          <div id="guiN3Wrapper" class="mt-2 hidden">
+            <label class="text-[10px] uppercase text-slate-400 block mb-1">Enter third number (n3)</label>
+            <input type="number" id="guiN3" value="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-amber-400 outline-none" />
+          </div>
+        </div>
+
+        <!-- Operations Row -->
+        <label class="text-[10px] uppercase text-slate-400 font-semibold block pt-1">Select Python Operation:</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button onclick="executeGuiCalc('add')" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 hover:text-emerald-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-plus text-emerald-400"></i> Add
+          </button>
+          <button onclick="executeGuiCalc('subtract')" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 hover:text-rose-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-minus text-rose-400"></i> Subtract
+          </button>
+          <button onclick="executeGuiCalc('multiply')" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 hover:text-indigo-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-xmark text-indigo-400"></i> Multiply
+          </button>
+          <button onclick="executeGuiCalc('divide')" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 hover:text-amber-400 text-xs font-semibold rounded-xl border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-divide text-amber-400"></i> Divide
+          </button>
+        </div>
+
+        <!-- Result Box -->
+        <div id="guiCalcDisplay" class="mt-4 p-4 rounded-2xl bg-cyber-950 border border-slate-800 text-xs space-y-1.5 shadow-inner">
+          <div class="flex items-center justify-between text-slate-400">
+            <span>Status:</span>
+            <span id="guiCalcStatus" class="text-amber-400 font-semibold">Ready</span>
+          </div>
+          <div id="guiCalcMainOutput" class="text-base font-bold text-white pt-1">Result: Press an operation</div>
+          <div id="guiCalcExtraOutput" class="text-xs text-cyan-300 font-mono hidden pt-1 border-t border-slate-800/80">
+            Quotient = 0 | Remainder = 0
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick protocol button inside modal -->
+      <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+        <span class="text-slate-400">Prefer Windows Calculator?</span>
+        <button onclick="launchWindowsCalculator()" class="text-amber-400 hover:underline flex items-center gap-1">
+          <i class="fa-brands fa-windows"></i> Open ms-calculator:
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== LOCAL BRIDGE HELPER MODAL ==================== -->
+  <div id="bridgeModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xl glass-panel rounded-3xl p-6 border border-cyan-500/30 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-code"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-white text-sm">Direct Local OS Bridge</h4>
+            <span class="text-[10px] text-slate-400">Optional 1-line script to spawn subprocesses from web calls</span>
+          </div>
+        </div>
+        <button onclick="toggleBridgeModal(false)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300 leading-relaxed font-sans">
+        <p>
+          Standard browsers prevent arbitrary websites from silently opening arbitrary binaries like <code class="text-yellow-300 font-mono">calc.exe</code> without prompts.
+          While this web app uses valid native URI schemes (<code class="text-cyan-300">ms-calculator:</code> and <code class="text-emerald-300">whatsapp://</code>), you can also run this mini Python bridge locally:
+        </p>
+
+        <div class="relative bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto">
+          <pre>import subprocess, http.server, webbrowser
+# Run locally to receive HTTP commands:
+# python -c "import subprocess, http.server; ..."</pre>
+          <button onclick="copyBridgeCode()" class="absolute top-2 right-2 px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[10px] flex items-center gap-1">
+            <i class="fa-regular fa-copy"></i> <span id="copyBtnText">Copy Code</span>
+          </button>
+        </div>
+
+        <p class="text-slate-400 text-[11px]">
+          Without any bridge, the buttons on this website already successfully trigger the registered Windows and WhatsApp application handlers directly.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       AUDIO FEEDBACK ENGINE (Web Audio API Synthesizer)
+       ========================================================= */
+    const audioState = {
+      enabled: true,
+      ctx: null
+    };
+
+    function initAudio() {
+      if (!audioState.ctx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioState.ctx = new AudioContext();
+      }
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.08, vol = 0.15) {
+      if (!audioState.enabled) return;
+      try {
+        initAudio();
+        if (!audioState.ctx) return;
+        const osc = audioState.ctx.createOscillator();
+        const gain = audioState.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioState.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, audioState.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioState.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioState.ctx.destination);
+        osc.start();
+        osc.stop(audioState.ctx.currentTime + duration);
+      } catch (err) {
+        // Audio policy ignore
+      }
+    }
+
+    function playSuccessSound() {
+      playTone(587.33, 'triangle', 0.1, 0.15); // D5
+      setTimeout(() => playTone(880, 'triangle', 0.15, 0.2), 90); // A5
+    }
+
+    function playErrorSound() {
+      playTone(220, 'sawtooth', 0.15, 0.2);
+      setTimeout(() => playTone(164.81, 'sawtooth', 0.2, 0.2), 120);
+    }
+
+    function toggleAudio() {
+      audioState.enabled = !audioState.enabled;
+      const icon = document.getElementById('audioIcon');
+      const text = document.querySelector('#audioBtn span');
+      if (audioState.enabled) {
+        icon.className = 'fa-solid fa-volume-high text-cyan-400';
+        if (text) text.textContent = 'SFX On';
+        playTone(600);
+      } else {
+        icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+        if (text) text.textContent = 'SFX Off';
+      }
+    }
+
+    /* =========================================================
+       AUTHENTICATION & LOCKSCREEN LOGIC
+       ========================================================= */
+    const AUTH_PASS = "abc12367";
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const pwdInput = document.getElementById('authPassword');
+      const errorMsg = document.getElementById('authError');
+      const loginBox = document.getElementById('loginBox');
+
+      if (pwdInput.value === AUTH_PASS) {
+        // Correct Password
+        playSuccessSound();
+        errorMsg.classList.add('hidden');
+        
+        const lockScreen = document.getElementById('lockScreen');
+        lockScreen.style.opacity = '0';
+        lockScreen.style.pointerEvents = 'none';
+
+        setTimeout(() => {
+          lockScreen.classList.add('hidden');
+          appendTerminalLine("<span class='text-cyan-400'>[OK]</span> Welcome to desktop! Enter an app name or 'whelp'", "text-emerald-400 font-bold");
+          document.getElementById('termInput').focus();
+        }, 600);
+
+      } else {
+        // Incorrect Password
+        playErrorSound();
+        errorMsg.classList.remove('hidden');
+        loginBox.classList.remove('shake-anim');
+        void loginBox.offsetWidth; // trigger reflow
+        loginBox.classList.add('shake-anim');
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('authPassword');
+      const icon = document.getElementById('togglePwdIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-solid fa-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-solid fa-eye';
+      }
+    }
+
+    function autoFillPassword() {
+      const input = document.getElementById('authPassword');
+      input.value = AUTH_PASS;
+      playTone(700, 'sine', 0.05);
+    }
+
+    function lockSystem() {
+      playTone(400, 'sine', 0.1);
+      const lockScreen = document.getElementById('lockScreen');
+      lockScreen.classList.remove('hidden');
+      setTimeout(() => {
+        lockScreen.style.opacity = '1';
+        lockScreen.style.pointerEvents = 'auto';
+        document.getElementById('authPassword').value = '';
+        document.getElementById('authError').classList.add('hidden');
+      }, 20);
+    }
+
+    /* =========================================================
+       REAL-TIME STATUS & CLOCK
+       ========================================================= */
+    function refreshClocks() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const secTimeStr = now.toLocaleTimeString();
+      const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+
+      const lockClock = document.getElementById('lockClock');
+      const lockDate = document.getElementById('lockDate');
+      const statusTime = document.getElementById('statusBarTime');
+
+      if (lockClock) lockClock.textContent = timeStr;
+      if (lockDate) lockDate.textContent = dateStr;
+      if (statusTime) statusTime.textContent = secTimeStr;
+    }
+    setInterval(refreshClocks, 1000);
+    refreshClocks();
+
+    /* =========================================================
+       DIRECT APP LAUNCHERS & URI HANDLERS
+       ========================================================= */
+    
+    // WHATSAPP LAUNCHERS
+    function launchWhatsAppNative() {
+      playTone(500);
+      appendTerminalLine("Executing: <span class='text-emerald-400'>whatsapp://</span> (Native Desktop Protocol)", "text-slate-300");
+      
+      // Trigger protocol handler for native WhatsApp
+      window.location.href = "whatsapp://";
+
+      // Offer automatic fallback prompt after 2.5 seconds if user is not redirected
+      setTimeout(() => {
+        appendTerminalLine("If WhatsApp desktop did not open, <a href='https://web.whatsapp.com' target='_blank' class='text-emerald-300 underline'>click here to open WhatsApp Web</a>", "text-amber-300");
+      }, 2500);
+    }
+
+    function openWhatsAppWeb() {
+      playTone(550);
+      appendTerminalLine("Opening WhatsApp Web in a new tab...", "text-emerald-400");
+      window.open("https://web.whatsapp.com", "_blank", "noopener,noreferrer");
+    }
+
+    function launchWhatsAppCustomNumber() {
+      const phone = prompt("Enter phone number with country code (e.g. 14155552671):");
+      if (phone) {
+        const clean = phone.replace(/[^0-9]/g, '');
+        if (clean) {
+          appendTerminalLine(`Opening WhatsApp chat for +${clean}...`, "text-emerald-400");
+          window.open(`https://api.whatsapp.com/send?phone=${clean}`, "_blank");
+        }
+      }
+    }
+
+    // CHROME & SEARCH LAUNCHERS
+    function launchChromeWindow() {
+      playTone(600);
+      appendTerminalLine("Opening new Google Chrome instance (https://www.google.com)...", "text-blue-400");
+      window.open("https://www.google.com", "_blank", "noopener,noreferrer");
+    }
+
+    function launchChromeSearch() {
+      const q = document.getElementById('chromeQuery').value.trim();
+      if (!q) {
+        launchChromeWindow();
+        return;
+      }
+      playTone(650);
+      appendTerminalLine(`Launching search query: "${q}"`, "text-blue-400");
+
+      if (q.startsWith('http://') || q.startsWith('https://')) {
+        window.open(q, "_blank");
+      } else if (q.includes('.') && !q.includes(' ')) {
+        window.open('https://' + q, "_blank");
+      } else {
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, "_blank");
+      }
+    }
+
+    function openPythonDocs() {
+      playTone(520);
+      appendTerminalLine("Opening Python Official Documentation...", "text-yellow-400");
+      window.open("https://docs.python.org/3/", "_blank");
+    }
+
+    // CALCULATOR LAUNCHERS
+    function launchWindowsCalculator() {
+      playTone(700);
+      appendTerminalLine("Executing: <span class='text-amber-400'>ms-calculator:</span> (Windows Native Calculator Scheme)", "text-slate-200");
+      
+      // Native URI Protocol that Windows 10 & 11 registers for calc.exe
+      window.location.href = "ms-calculator:";
+
+      setTimeout(() => {
+        appendTerminalLine("If Windows Calculator did not open (non-Windows OS), launching Python Calculator widget...", "text-slate-400");
+      }, 2000);
+    }
+
+    function toggleCalculatorModal(show) {
+      const modal = document.getElementById('calcModal');
+      if (show) {
+        playTone(450);
+        modal.classList.remove('hidden');
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function showBridgeModal() {
+      toggleBridgeModal(true);
+    }
+
+    function toggleBridgeModal(show) {
+      const m = document.getElementById('bridgeModal');
+      if (show) m.classList.remove('hidden');
+      else m.classList.add('hidden');
+    }
+
+    function copyBridgeCode() {
+      const code = `import http.server, subprocess, webbrowser
+
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/calc':
+            subprocess.Popen('calc.exe')
+        elif self.path == '/whatsapp':
+            subprocess.Popen(['start', 'whatsapp:'], shell=True)
+        elif self.path == '/chrome':
+            subprocess.Popen(['start', 'chrome'], shell=True)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+
+http.server.HTTPServer(('localhost', 8999), Handler).serve_forever()`;
+
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.getElementById('copyBtnText');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy Code', 2000);
+      });
+    }
+
+    /* =========================================================
+       EMBEDDED PYTHON CALCULATOR (Exact Logic from Script)
+       ========================================================= */
+    function toggleGuiN3Field() {
+      const hasN3 = document.getElementById('guiHasN3').checked;
+      const wrapper = document.getElementById('guiN3Wrapper');
+      if (hasN3) {
+        wrapper.classList.remove('hidden');
+      } else {
+        wrapper.classList.add('hidden');
+      }
+    }
+
+    function executeGuiCalc(op) {
+      const n1 = parseFloat(document.getElementById('guiN1').value);
+      const n2 = parseFloat(document.getElementById('guiN2').value);
+      const hasN3 = document.getElementById('guiHasN3').checked;
+      const n3 = hasN3 ? parseFloat(document.getElementById('guiN3').value) : null;
+
+      const statusEl = document.getElementById('guiCalcStatus');
+      const mainEl = document.getElementById('guiCalcMainOutput');
+      const extraEl = document.getElementById('guiCalcExtraOutput');
+
+      if (isNaN(n1) || isNaN(n2) || (hasN3 && isNaN(n3))) {
+        statusEl.textContent = 'Error: Invalid numbers';
+        statusEl.className = 'text-rose-400 font-semibold';
+        playErrorSound();
+        return;
+      }
+
+      statusEl.textContent = 'Computing python logic...';
+      statusEl.className = 'text-cyan-400 font-semibold';
+      playTone(500);
+
+      setTimeout(() => {
+        statusEl.textContent = 'Completed';
+        statusEl.className = 'text-emerald-400 font-semibold';
+        playTone(700);
+
+        if (op === 'add') {
+          const val3 = n3 !== null ? n3 : 0;
+          const total = n1 + n2 + val3;
+          mainEl.innerHTML = `Sum is: <span class="text-emerald-400 font-bold">${total}</span>`;
+          extraEl.classList.add('hidden');
+        } else if (op === 'subtract') {
+          const val3 = n3 !== null ? n3 : 0;
+          const diff = n1 - n2 - val3;
+          mainEl.innerHTML = `Difference is: <span class="text-rose-400 font-bold">${diff}</span>`;
+          extraEl.classList.add('hidden');
+        } else if (op === 'multiply') {
+          const val3 = n3 !== null ? n3 : 1;
+          const product = n1 * n2 * val3;
+          mainEl.innerHTML = `Product is: <span class="text-indigo-400 font-bold">${product}</span>`;
+          extraEl.classList.add('hidden');
+        } else if (op === 'divide') {
+          const val3 = n3 !== null ? n3 : 1;
+          if (n2 === 0 || val3 === 0) {
+            mainEl.innerHTML = `<span class="text-rose-400 font-bold">ZeroDivisionError: division by zero</span>`;
+            extraEl.classList.add('hidden');
+            playErrorSound();
+            return;
+          }
+          const d = (n1 / n2) / val3;
+          const quotient = Math.floor(Math.floor(n1 / n2) / val3);
+          const remainder = n1 % n2;
+
+          mainEl.innerHTML = `Result is: <span class="text-amber-400 font-bold">${d}</span>`;
+          extraEl.innerHTML = `Quotient = <b class="text-white">${quotient}</b> &nbsp;|&nbsp; Remainder = <b class="text-white">${remainder}</b>`;
+          extraEl.classList.remove('hidden');
+        }
+      }, 250);
+    }
+
+    /* =========================================================
+       INTERACTIVE VIRTUAL TERMINAL (Full Python CLI Flow)
+       ========================================================= */
+    const terminalState = {
+      step: 'COMMAND', // COMMAND, N1, N2, HAS_N3, N3, OP
+      calcData: { n1: 0, n2: 0, n3: null }
+    };
+
+    const termLog = document.getElementById('terminalLog');
+    const termInput = document.getElementById('termInput');
+    const termPrefix = document.getElementById('termPromptPrefix');
+
+    function appendTerminalLine(html, className = "text-slate-300") {
+      const line = document.createElement('div');
+      line.className = `${className} leading-relaxed`;
+      line.innerHTML = html;
+      termLog.appendChild(line);
+      termLog.scrollTop = termLog.scrollHeight;
+    }
+
+    function clearTerminal() {
+      playTone(400);
+      termLog.innerHTML = `
+        <div class="text-slate-500">Terminal display cleared.</div>
+        <div class="text-yellow-300">Type <span class="underline font-semibold cursor-pointer" onclick="insertSampleCommand('whelp')">'whelp'</span> for apps.</div>
+      `;
+    }
+
+    function insertSampleCommand(cmd) {
+      termInput.value = cmd;
+      termInput.focus();
+    }
+
+    termInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleTerminalSubmit();
+      }
+    });
+
+    function runCalculatorInTerminal() {
+      terminalState.step = 'N1';
+      termPrefix.textContent = 'Enter first number:';
+      appendTerminalLine("<span class='text-amber-400'>[Calculator Mode Started]</span>", "font-bold");
+      appendTerminalLine("Enter first number:", "text-slate-300");
+      termInput.value = '';
+      termInput.focus();
+      termInput.scrollIntoView();
+    }
+
+    function handleTerminalSubmit() {
+      const val = termInput.value.trim();
+      termInput.value = '';
+
+      if (terminalState.step === 'COMMAND') {
+        processCommand(val);
+      } else {
+        processInteractiveCalc(val);
+      }
+    }
+
+    function processCommand(rawInput) {
+      const cmd = rawInput.toLowerCase();
+      appendTerminalLine(`<span class="text-cyan-400">-></span> ${rawInput}`, "text-white font-semibold");
+
+      if (!cmd) return;
+
+      if (cmd === 'whelp') {
+        playTone(550);
+        appendTerminalLine(`
+          <div class="text-amber-300 space-y-1">
+            <b>Apps available:</b><br/>
+            &nbsp;1) <span class="text-emerald-400 font-bold">whatsapp</span> - Launch WhatsApp Native / Web<br/>
+            &nbsp;2) <span class="text-blue-400 font-bold">chrome</span> - Launch Google Chrome / Search<br/>
+            &nbsp;3) <span class="text-amber-400 font-bold">calculator</span> (or 'calc') - Run Python 3-Number Calculator<br/>
+            &nbsp;4) <span class="text-slate-400 font-bold">clear</span> - Clear screen<br/>
+            &nbsp;5) <span class="text-rose-400 font-bold">lock</span> - Lock the OS
+          </div>
+        `);
+      } 
+      else if (cmd === 'whatsapp') {
+        playTone(500);
+        appendTerminalLine("Opening WhatsApp...", "text-emerald-400 font-semibold");
+        launchWhatsAppNative();
+      } 
+      else if (cmd === 'chrome' || cmd === 'google') {
+        playTone(600);
+        appendTerminalLine("Opening Google Chrome...", "text-blue-400 font-semibold");
+        launchChromeWindow();
+      } 
+      else if (['calculator', 'calc'].includes(cmd)) {
+        playTone(650);
+        terminalState.step = 'N1';
+        termPrefix.textContent = 'Enter first number:';
+        appendTerminalLine("Enter first number:", "text-yellow-300 font-medium");
+      } 
+      else if (cmd === 'clear') {
+        clearTerminal();
+      } 
+      else if (cmd === 'lock') {
+        lockSystem();
+      } 
+      else {
+        playErrorSound();
+        appendTerminalLine("Not available. Enter 'whelp' if u want the list of apps", "text-rose-400");
+      }
+    }
+
+    function processInteractiveCalc(input) {
+      const lower = input.toLowerCase();
+
+      if (terminalState.step === 'N1') {
+        appendTerminalLine(`First number: <b class="text-white">${input}</b>`, "text-yellow-300");
+        const val = parseFloat(input);
+        if (isNaN(val)) {
+          appendTerminalLine("Invalid number! Enter first number again:", "text-rose-400");
+          return;
+        }
+        terminalState.calcData.n1 = val;
+        terminalState.step = 'N2';
+        termPrefix.textContent = 'Enter second number:';
+        appendTerminalLine("Enter second number:", "text-yellow-300 font-medium");
+      }
+      else if (terminalState.step === 'N2') {
+        appendTerminalLine(`Second number: <b class="text-white">${input}</b>`, "text-yellow-300");
+        const val = parseFloat(input);
+        if (isNaN(val)) {
+          appendTerminalLine("Invalid number! Enter second number again:", "text-rose-400");
+          return;
+        }
+        terminalState.calcData.n2 = val;
+        terminalState.step = 'HAS_N3';
+        termPrefix.textContent = 'Operate with third number? (yes/no) ->';
+        appendTerminalLine("Do you want to operate with a third number? (yes/no) ->", "text-yellow-300 font-medium");
+      }
+      else if (terminalState.step === 'HAS_N3') {
+        appendTerminalLine(`Third number choice: <b class="text-white">${input}</b>`, "text-yellow-300");
+        if (['yes', 'y', 'ye'].includes(lower)) {
+          terminalState.step = 'N3';
+          termPrefix.textContent = 'Enter third number:';
+          appendTerminalLine("Enter third number:", "text-yellow-300 font-medium");
+        } else {
+          terminalState.calcData.n3 = null;
+          terminalState.step = 'OP';
+          termPrefix.textContent = 'Operation (Add/Subtract/Multiply/Divide):';
+          appendTerminalLine("What operation to perform (Add/Subtract/Multiply/Divide):", "text-yellow-300 font-medium");
+        }
+      }
+      else if (terminalState.step === 'N3') {
+        appendTerminalLine(`Third number: <b class="text-white">${input}</b>`, "text-yellow-300");
+        const val = parseFloat(input);
+        if (isNaN(val)) {
+          appendTerminalLine("Invalid number! Enter third number again:", "text-rose-400");
+          return;
+        }
+        terminalState.calcData.n3 = val;
+        terminalState.step = 'OP';
+        termPrefix.textContent = 'Operation (Add/Subtract/Multiply/Divide):';
+        appendTerminalLine("What operation to perform (Add/Subtract/Multiply/Divide):", "text-yellow-300 font-medium");
+      }
+      else if (terminalState.step === 'OP') {
+        appendTerminalLine(`Operation selected: <b class="text-white">${input}</b>`, "text-yellow-300");
+        const { n1, n2, n3 } = terminalState.calcData;
+
+        if (['sum', 'add', 'a'].includes(lower)) {
+          const val3 = n3 !== null ? n3 : 0;
+          const total = n1 + n2 + val3;
+          appendTerminalLine("Summing...", "text-slate-400");
+          setTimeout(() => {
+            playTone(600);
+            appendTerminalLine(`<b>Sum is: ${total}</b>`, "text-emerald-400 text-sm font-bold");
+            resetTerminalPrompt();
+          }, 400);
+        }
+        else if (['subtract', 'sub', 's'].includes(lower)) {
+          const val3 = n3 !== null ? n3 : 0;
+          const diff = n1 - n2 - val3;
+          appendTerminalLine("Subtracting...", "text-slate-400");
+          setTimeout(() => {
+            playTone(600);
+            appendTerminalLine(`<b>Difference is: ${diff}</b>`, "text-rose-400 text-sm font-bold");
+            resetTerminalPrompt();
+          }, 400);
+        }
+        else if (['multiply', 'mul', 'm'].includes(lower)) {
+          const val3 = n3 !== null ? n3 : 1;
+          const prod = n1 * n2 * val3;
+          appendTerminalLine("Multiplying...", "text-slate-400");
+          setTimeout(() => {
+            playTone(600);
+            appendTerminalLine(`<b>Product is: ${prod}</b>`, "text-indigo-400 text-sm font-bold");
+            resetTerminalPrompt();
+          }, 400);
+        }
+        else if (['division', 'divide', 'div', 'd'].includes(lower)) {
+          const val3 = n3 !== null ? n3 : 1;
+          if (n2 === 0 || val3 === 0) {
+            playErrorSound();
+            appendTerminalLine("ZeroDivisionError: division by zero", "text-rose-500 font-bold");
+            resetTerminalPrompt();
+            return;
+          }
+          appendTerminalLine("Dividing...", "text-slate-400");
+          setTimeout(() => {
+            playTone(600);
+            const d = (n1 / n2) / val3;
+            const quotient = Math.floor(Math.floor(n1 / n2) / val3);
+            const remainder = n1 % n2;
+            appendTerminalLine(`Result is: <span class="text-amber-300 font-bold">${d}</span>`, "text-white");
+            appendTerminalLine(`Quotient = <b class="text-cyan-300">${quotient}</b>`, "text-slate-200");
+            appendTerminalLine(`Remainder = <b class="text-cyan-300">${remainder}</b>`, "text-slate-200");
+            resetTerminalPrompt();
+          }, 400);
+        }
+        else {
+          playErrorSound();
+          appendTerminalLine("Unknown operation. Calculation reset.", "text-rose-400");
+          resetTerminalPrompt();
+        }
+      }
+    }
+
+    function resetTerminalPrompt() {
+      terminalState.step = 'COMMAND';
+      termPrefix.textContent = '->';
+      appendTerminalLine("<span class='text-slate-500'>Ready for next command...</span>");
+      termLog.scrollTop = termLog.scrollHeight;
+    }
+  </script>
+</body>
+</html>
